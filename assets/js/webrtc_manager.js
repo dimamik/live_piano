@@ -1,23 +1,25 @@
 // WebRTC Manager for P2P MIDI connections
 
-// ICE servers for WebRTC connection
-// For local dev: disable mDNS in chrome://flags/#enable-webrtc-hide-local-ips-with-mdns
-// For production: add TURN server (e.g., from metered.ca, twilio, or self-hosted coturn)
-const ICE_SERVERS = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
-  ]
-};
+// Default ICE servers (STUN only - won't work on mobile networks/Safari without TURN)
+const DEFAULT_ICE_SERVERS = [
+  { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }
+];
 
 export class WebRTCManager {
-  constructor(channel, onMidiReceived) {
+  constructor(channel, onMidiReceived, iceServers = null) {
     this.channel = channel;
     this.onMidiReceived = onMidiReceived;
     this.peers = new Map();        // peerId -> RTCPeerConnection
     this.dataChannels = new Map(); // peerId -> RTCDataChannel
     this.localId = null;
     this.pendingCandidates = new Map(); // peerId -> ICE candidates waiting for remote description
+
+    // Use provided ICE servers or fall back to defaults
+    // For Safari/iOS on mobile networks, TURN servers are required
+    this.iceConfig = {
+      iceServers: iceServers && iceServers.length > 0 ? iceServers : DEFAULT_ICE_SERVERS
+    };
+    console.log("WebRTC ICE config:", this.iceConfig);
   }
 
   init(localId) {
@@ -96,7 +98,7 @@ export class WebRTCManager {
   }
 
   createPeerConnection(peerId) {
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+    const pc = new RTCPeerConnection(this.iceConfig);
 
     // Handle ICE candidates
     pc.onicecandidate = (event) => {

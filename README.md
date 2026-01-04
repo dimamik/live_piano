@@ -1,15 +1,15 @@
 <p align="center">
-	<img src="https://raw.githubusercontent.com/dimamik/midi_rooms/main/img/logo-rich.png" alt="MidiRooms logo" width="160" />
+	<img src="https://raw.githubusercontent.com/dimamik/live_piano/main/img/logo-rich.png" alt="LivePiano logo" width="160" />
 </p>
 
 <p align="center">
-	<a href="https://github.com/dimamik/midi_rooms/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License - MIT" /></a>
-	<a href="https://hex.pm/packages/midi_rooms"><img src="https://img.shields.io/hexpm/v/midi_rooms.svg" alt="Hex version" /></a>
-	<a href="https://github.com/dimamik/midi_rooms/blob/main/deployment/fly/README.md"><img src="https://img.shields.io/badge/Deploy%20to-Fly-blueviolet?logo=fly.io" alt="Deploy to Fly" /></a>
-	<a href="https://github.com/dimamik/midi_rooms/blob/main/deployment/vps/README.md"><img src="https://img.shields.io/badge/Deploy%20on-VPS-blue?logo=docker" alt="Deploy on VPS" /></a>
+	<a href="https://github.com/dimamik/live_piano/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License - MIT" /></a>
+	<a href="https://hex.pm/packages/live_piano"><img src="https://img.shields.io/hexpm/v/live_piano.svg" alt="Hex version" /></a>
+	<a href="https://github.com/dimamik/live_piano/blob/main/deployment/fly/README.md"><img src="https://img.shields.io/badge/Deploy%20to-Fly-blueviolet?logo=fly.io" alt="Deploy to Fly" /></a>
+	<a href="https://github.com/dimamik/live_piano/blob/main/deployment/vps/README.md"><img src="https://img.shields.io/badge/Deploy%20on-VPS-blue?logo=docker" alt="Deploy on VPS" /></a>
 </p>
 
-# MidiRooms
+# LivePiano
 
 An opinionated Phoenix starter designed for speed without sacrificing quality. Spin up a PoC in minutes, then scale it into a production-grade application — the foundation is already there.
 
@@ -19,10 +19,10 @@ Built-in patterns help you (and your AI coding agents) extend the app while foll
 
 ```bash
 # 1. Install the generator as a Mix archive (if not already)
-mix archive.install hex midi_rooms --force
+mix archive.install hex live_piano --force
 
 # 2. Generate a new app
-mix midi_rooms.new my_new_app
+mix live_piano.new my_new_app
 
 # 3. Set it up and run it
 cd my_new_app

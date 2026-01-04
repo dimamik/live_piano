@@ -7,24 +7,24 @@ import Config
 # Run `mix help test` for more information.
 database_url =
   System.get_env("DATABASE_URL") ||
-    "postgresql://postgres:postgres@localhost/midi_rooms_test#{System.get_env("MIX_TEST_PARTITION")}"
+    "postgresql://postgres:postgres@localhost/live_piano_test#{System.get_env("MIX_TEST_PARTITION")}"
 
-config :midi_rooms, MidiRooms.Repo,
+config :live_piano, LivePiano.Repo,
   url: database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :midi_rooms, MidiRoomsWeb.Endpoint,
+config :live_piano, LivePianoWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "auGzTGxqLLMGEYCsTQv8dnZbz90hYrznPfShGqt2Ac5J5zW2z5btpAwu7AY4AqNs",
   server: false
 
 # In test we don't send emails
-config :midi_rooms, MidiRooms.Mailer, adapter: Swoosh.Adapters.Test
+config :live_piano, LivePiano.Mailer, adapter: Swoosh.Adapters.Test
 
-config :midi_rooms, Oban, testing: :manual
+config :live_piano, Oban, testing: :manual
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false

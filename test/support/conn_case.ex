@@ -1,4 +1,4 @@
-defmodule MidiRoomsWeb.ConnCase do
+defmodule LivePianoWeb.ConnCase do
   @moduledoc """
   This module defines the test case to be used by
   tests that require setting up a connection.
@@ -11,7 +11,7 @@ defmodule MidiRoomsWeb.ConnCase do
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
   PostgreSQL, you can even run database tests asynchronously
-  by setting `use MidiRoomsWeb.ConnCase, async: true`, although
+  by setting `use LivePianoWeb.ConnCase, async: true`, although
   this option is not recommended for other databases.
   """
 
@@ -20,19 +20,19 @@ defmodule MidiRoomsWeb.ConnCase do
   using do
     quote do
       # The default endpoint for testing
-      @endpoint MidiRoomsWeb.Endpoint
+      @endpoint LivePianoWeb.Endpoint
 
-      use MidiRoomsWeb, :verified_routes
+      use LivePianoWeb, :verified_routes
 
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
-      import MidiRoomsWeb.ConnCase
+      import LivePianoWeb.ConnCase
     end
   end
 
   setup tags do
-    MidiRooms.DataCase.setup_sandbox(tags)
+    LivePiano.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

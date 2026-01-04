@@ -1,59 +1,68 @@
-name: midi_rooms
+name: live_piano
 services:
-  midi_rooms_postgres:
+  coturn:
+    image: coturn/coturn:4.6.2-alpine
+    container_name: live_piano_coturn
+    restart: always
+    network_mode: host
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
+  live_piano_postgres:
     image: postgres:17.7-alpine
-    container_name: midi_rooms_postgres
+    container_name: live_piano_postgres
     restart: always
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
     networks:
-      - midi_rooms_network
+      - live_piano_network
     expose:
       - 5432
     volumes:
-      - midi_rooms_db:/var/lib/postgresql/data
+      - live_piano_db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 2s
       retries: 10
-  midi_rooms:
-    image: ghcr.io/dimamik/midi_rooms
-    container_name: midi_rooms
+  live_piano:
+    image: ghcr.io/dimamik/live_piano
+    container_name: live_piano
     restart: always
     networks:
       - nginx_network
-      - midi_rooms_network
+      - live_piano_network
     expose:
       - 4000
     depends_on:
-      midi_rooms_postgres:
+      live_piano_postgres:
         condition: service_healthy
     env_file:
       - ${PWD}/.env
     labels:
-      - "com.centurylinklabs.watchtower.scope=midi_rooms"
-  midi_rooms_watchtower:
+      - "com.centurylinklabs.watchtower.scope=live_piano"
+  live_piano_watchtower:
     image: containrrr/watchtower
-    container_name: midi_rooms_watchtower
+    container_name: live_piano_watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - $HOME/.docker/config.json:/config.json
-    command: --interval 60 --cleanup midi_rooms --scope midi_rooms
+    command: --interval 60 --cleanup live_piano --scope live_piano
     depends_on:
-      - midi_rooms
+      - live_piano
     restart: unless-stopped
 volumes:
-  midi_rooms_db:
+  live_piano_db:
     driver: local
 
 networks:
   nginx_network:
     name: nginx_network
     external: true
-  midi_rooms_network:
-    name: midi_rooms_network
+  live_piano_network:
+    name: live_piano_network
     driver: bridge
     internal: true

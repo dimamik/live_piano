@@ -1,4 +1,4 @@
-defmodule MidiRooms.Repo.Migrations.AddOban do
+defmodule LivePiano.Repo.Migrations.AddOban do
   use Ecto.Migration
 
   def up, do: Oban.Migration.up()

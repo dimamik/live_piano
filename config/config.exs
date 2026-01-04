@@ -7,25 +7,25 @@
 # General application configuration
 import Config
 
-config :midi_rooms, Oban,
+config :live_piano, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
   queues: [default: 10],
-  repo: MidiRooms.Repo
+  repo: LivePiano.Repo
 
-config :midi_rooms,
-  ecto_repos: [MidiRooms.Repo],
+config :live_piano,
+  ecto_repos: [LivePiano.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Configures the endpoint
-config :midi_rooms, MidiRoomsWeb.Endpoint,
+config :live_piano, LivePianoWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: MidiRoomsWeb.ErrorHTML, json: MidiRoomsWeb.ErrorJSON],
+    formats: [html: LivePianoWeb.ErrorHTML, json: LivePianoWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: MidiRooms.PubSub,
+  pubsub_server: LivePiano.PubSub,
   live_view: [signing_salt: "7cdr21He"]
 
 # Configures the mailer
@@ -35,12 +35,12 @@ config :midi_rooms, MidiRoomsWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :midi_rooms, MidiRooms.Mailer, adapter: Swoosh.Adapters.Local
+config :live_piano, LivePiano.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
-  midi_rooms: [
+  live_piano: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
@@ -50,7 +50,7 @@ config :esbuild,
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.1.7",
-  midi_rooms: [
+  live_piano: [
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/css/app.css

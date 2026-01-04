@@ -1,5 +1,5 @@
-defmodule MidiRoomsWeb.PageControllerTest do
-  use MidiRoomsWeb.ConnCase
+defmodule LivePianoWeb.PageControllerTest do
+  use LivePianoWeb.ConnCase
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")

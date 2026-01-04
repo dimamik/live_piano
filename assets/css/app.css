@@ -4,7 +4,7 @@
 @import "tailwindcss" source(none);
 @source "../css";
 @source "../js";
-@source "../../lib/midi_rooms_web";
+@source "../../lib/live_piano_web";
 
 /* A Tailwind plugin that makes "hero-#{ICON}" classes available.
    The heroicons installation itself is managed by your mix.exs */
@@ -100,7 +100,10 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 /* Make LiveView wrapper divs transparent for layout */
-[data-phx-session], [data-phx-teleported-src] { display: contents }
+[data-phx-session],
+[data-phx-teleported-src] {
+  display: contents
+}
 
 /* This file is for your main application CSS */
 
@@ -135,8 +138,8 @@
   border-radius: 0 0 4px 4px;
   margin: 0 1px;
   box-shadow:
-    0 2px 3px rgba(0,0,0,0.1),
-    inset 0 -3px 0 rgba(0,0,0,0.1);
+    0 2px 3px rgba(0, 0, 0, 0.1),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.1);
   z-index: 1;
 }
 
@@ -147,8 +150,8 @@
 .white-key.active {
   background: linear-gradient(180deg, #a5d6a7 0%, #81c784 100%);
   box-shadow:
-    0 1px 2px rgba(0,0,0,0.2),
-    inset 0 -1px 0 rgba(0,0,0,0.1);
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
   transform: translateY(2px);
 }
 
@@ -159,8 +162,8 @@
   border-radius: 0 0 3px 3px;
   margin: 0 -14px;
   box-shadow:
-    0 3px 5px rgba(0,0,0,0.4),
-    inset 0 -2px 3px rgba(0,0,0,0.3);
+    0 3px 5px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3);
   z-index: 2;
 }
 
@@ -171,8 +174,8 @@
 .black-key.active {
   background: linear-gradient(180deg, #4caf50 0%, #388e3c 100%);
   box-shadow:
-    0 1px 2px rgba(0,0,0,0.3),
-    inset 0 -1px 2px rgba(0,0,0,0.2);
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.2);
   transform: translateY(2px);
   height: 108px;
 }

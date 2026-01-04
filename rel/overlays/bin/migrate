@@ -2,4 +2,4 @@
 set -eu
 
 cd -P -- "$(dirname -- "$0")"
-exec ./midi_rooms eval MidiRooms.Release.migrate
+exec ./live_piano eval LivePiano.Release.migrate

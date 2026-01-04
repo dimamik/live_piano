@@ -1,7 +1,7 @@
-defmodule MidiRoomsWeb.ReqTest do
+defmodule LivePianoWeb.ReqTest do
   @moduledoc false
 
-  use MidiRoomsWeb.ConnCase, async: true
+  use LivePianoWeb.ConnCase, async: true
 
   test "no real requests are made" do
     assert_raise(RuntimeError, ~r/cannot find mock\/stub/, fn ->

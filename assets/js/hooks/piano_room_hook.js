@@ -13,6 +13,15 @@ const PianoRoom = {
     this.slug = this.el.dataset.slug;
     console.log("Slug:", this.slug);
 
+    // Parse ICE servers from data attribute
+    try {
+      this.iceServers = JSON.parse(this.el.dataset.iceServers || "[]");
+      console.log("ICE servers:", this.iceServers);
+    } catch (e) {
+      console.warn("Failed to parse ICE servers:", e);
+      this.iceServers = [];
+    }
+
     // Initialize components
     this.piano = new Piano();
 
@@ -80,7 +89,8 @@ const PianoRoom = {
           // onMidiReceived - handle MIDI from other peers
           (type, note, velocity) => {
             this.handleIncomingMidi({ type, note, velocity });
-          }
+          },
+          this.iceServers
         );
         this.webrtcManager.init(this.localPeerId);
 
@@ -134,15 +144,17 @@ const PianoRoom = {
     console.log("Setting up MIDI handler...");
 
     this.midiHandler = new MidiHandler(
-      // onNoteOn
+      // onNoteOn - broadcast to peers and play locally
       (note, velocity) => {
         console.log("MIDI Note On:", note, velocity);
         this.sendMidiEvent("on", note, velocity);
+        this.playNote(note, velocity); // Play locally immediately
       },
-      // onNoteOff
+      // onNoteOff - broadcast to peers and stop locally
       (note) => {
         console.log("MIDI Note Off:", note);
         this.sendMidiEvent("off", note, 0);
+        this.stopNote(note); // Stop locally immediately
       },
       // onDevicesChanged
       (devices) => {
