@@ -4,6 +4,7 @@ import { Socket } from "phoenix";
 import { MidiHandler } from "../midi";
 import { Piano, startAudioContext } from "../piano";
 import { PianoKeyboard } from "../piano_keyboard";
+import { WebRTCManager } from "../webrtc_manager";
 
 const PianoRoom = {
   mounted() {
@@ -18,21 +19,25 @@ const PianoRoom = {
     // Setup keyboard with callbacks - everyone can play
     this.keyboard = new PianoKeyboard(
       document.getElementById("piano-keyboard"),
-      // onNoteOn - broadcast to room
+      // onNoteOn - broadcast to peers and play locally
       (note, velocity) => {
         this.sendMidiEvent("on", note, velocity);
-        // Don't play locally - wait for broadcast to avoid double-playing
+        this.playNote(note, velocity); // Play locally immediately
       },
       // onNoteOff
       (note) => {
         this.sendMidiEvent("off", note, 0);
+        this.stopNote(note); // Stop locally immediately
       }
     );
     this.keyboard.render();
 
     this.channel = null;
+    this.webrtcManager = null;
     this.midiHandler = null;
     this.audioStarted = false;
+    this.localPeerId = null;
+    this.pendingPresenceState = null; // Store presence until WebRTC is ready
 
     // Connect to channel
     this.connectChannel();
@@ -47,13 +52,10 @@ const PianoRoom = {
 
     this.channel = socket.channel(`room:${this.slug}`, {});
 
-    // Receive MIDI events from others (and self)
-    this.channel.on("midi", (payload) => {
-      this.handleIncomingMidi(payload);
-    });
-
+    // Handle presence for peer count only
     this.channel.on("presence_state", (state) => {
       const count = Object.keys(state).length;
+      console.log("Presence state - peer count:", count, "peers:", Object.keys(state));
       this.updateListenerCount(count);
     });
 
@@ -70,6 +72,21 @@ const PianoRoom = {
     this.channel.join()
       .receive("ok", (resp) => {
         console.log("Joined room successfully", resp);
+        this.localPeerId = resp.peer_id;
+
+        // Initialize WebRTC manager after we have our peer ID
+        this.webrtcManager = new WebRTCManager(
+          this.channel,
+          // onMidiReceived - handle MIDI from other peers
+          (type, note, velocity) => {
+            this.handleIncomingMidi({ type, note, velocity });
+          }
+        );
+        this.webrtcManager.init(this.localPeerId);
+
+        // Don't connect to existing peers here - they will initiate via peer_joined
+        // This prevents "glare" where both sides send offers simultaneously
+        this.pendingPresenceState = null;
       })
       .receive("error", (resp) => {
         console.error("Unable to join room", resp);
@@ -159,8 +176,9 @@ const PianoRoom = {
   },
 
   sendMidiEvent(type, note, velocity) {
-    if (this.channel) {
-      this.channel.push("midi", { type, note, velocity });
+    // Send via WebRTC P2P to all connected peers
+    if (this.webrtcManager) {
+      this.webrtcManager.broadcastMidi(type, note, velocity);
     }
   },
 
@@ -199,6 +217,9 @@ const PianoRoom = {
   },
 
   destroyed() {
+    if (this.webrtcManager) {
+      this.webrtcManager.destroy();
+    }
     if (this.midiHandler) {
       this.midiHandler.destroy();
     }

@@ -1,7 +1,8 @@
 defmodule MidiRoomsWeb.RoomChannel do
   @moduledoc """
-  Channel for real-time MIDI event broadcasting in piano rooms.
-  Everyone can play, everyone hears all notes.
+  Channel for WebRTC signaling in piano rooms.
+  Handles peer discovery and SDP/ICE exchange for P2P connections.
+  MIDI data flows directly between browsers via WebRTC DataChannels.
   """
   use MidiRoomsWeb, :channel
 
@@ -13,7 +14,7 @@ defmodule MidiRoomsWeb.RoomChannel do
       {:ok, _room} ->
         socket = assign(socket, :slug, slug)
         send(self(), :after_join)
-        {:ok, socket}
+        {:ok, %{peer_id: socket.id}, socket}
 
       {:error, :not_found} ->
         {:error, %{reason: "room_not_found"}}
@@ -22,18 +23,29 @@ defmodule MidiRoomsWeb.RoomChannel do
 
   @impl true
   def handle_info(:after_join, socket) do
-    {:ok, _} = MidiRoomsWeb.Presence.track(socket, socket.id, %{
-      joined_at: System.system_time(:second)
-    })
+    {:ok, _} =
+      MidiRoomsWeb.Presence.track(socket, socket.id, %{
+        joined_at: System.system_time(:second)
+      })
 
+    # Send current peers list to new joiner
     push(socket, "presence_state", MidiRoomsWeb.Presence.list(socket))
+
+    # Notify existing peers about the new joiner
+    broadcast_from!(socket, "peer_joined", %{peer_id: socket.id})
+
     {:noreply, socket}
   end
 
   @impl true
-  def handle_in("midi", payload, socket) do
-    # Broadcast to everyone in the room (including sender)
-    broadcast!(socket, "midi", payload)
+  def handle_in("signal", %{"to" => target_id, "data" => data}, socket) do
+    # Relay signaling message (SDP offer/answer or ICE candidate) to target peer
+    broadcast_from!(socket, "signal", %{
+      from: socket.id,
+      to: target_id,
+      data: data
+    })
+
     {:noreply, socket}
   end
 end

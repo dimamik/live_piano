@@ -43,10 +43,10 @@ export class Piano {
         "D#7": "Ds7.mp3",
         "F#7": "Fs7.mp3",
         A7: "A7.mp3",
-        C8: "C8.mp3"
+        C8: "C8.mp3",
       },
       release: 1,
-      baseUrl: "https://tonejs.github.io/audio/salamander/"
+      baseUrl: "https://tonejs.github.io/audio/salamander/",
     }).toDestination();
 
     // Wait for samples to load
@@ -74,7 +74,20 @@ export class Piano {
 
   // Convert MIDI note number to Tone.js note name
   midiToNoteName(noteNumber) {
-    const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const notes = [
+      "C",
+      "C#",
+      "D",
+      "D#",
+      "E",
+      "F",
+      "F#",
+      "G",
+      "G#",
+      "A",
+      "A#",
+      "B",
+    ];
     const octave = Math.floor(noteNumber / 12) - 1;
     const noteName = notes[noteNumber % 12];
     return `${noteName}${octave}`;

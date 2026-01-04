@@ -22,6 +22,7 @@ defmodule MidiRooms.RoomServer do
   """
   def create_room do
     slug = generate_slug()
+
     room = %__MODULE__{
       slug: slug,
       created_at: DateTime.utc_now()
