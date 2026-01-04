@@ -1,0 +1,185 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - "**"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.ref }} # Groups workflows by branch
+  cancel-in-progress: true # Cancels previous runs when a new one starts
+
+jobs:
+  test:
+    env:
+      MIX_ENV: test
+    services:
+      db:
+        image: postgres:17
+        ports:
+          - 5432/tcp
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: phenom_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 5
+
+    runs-on: ubuntu-latest
+    name: Test on OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    strategy:
+      matrix:
+        otp: ["28.1"]
+        elixir: ["1.19.1"]
+    steps:
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache deps
+        id: cache-deps
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-elixir-deps
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ env.cache-name }}-
+
+      # Define how to cache the `_build` directory. After the first run,
+      # this speeds up test runs a lot. This includes not re-compiling our
+      # project's downloaded deps every run.
+      - name: Cache compiled build
+        id: cache-build
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-compiled-build
+        with:
+          path: _build
+          key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ env.cache-name }}-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-mix-${{ env.cache-name }}-
+
+      # Step: Download project dependencies. If unchanged, uses
+      # the cached version.
+      - name: Install dependencies
+        run: mix deps.get --check-locked
+
+      - name: Compiles without warnings
+        run: mix compile --warnings-as-errors
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Run credo
+        run: mix credo
+
+      - name: Run security checks
+        run: mix test.security
+
+      - name: Check for unused dependencies
+        run: mix deps.unlock --check-unused
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.db.ports[5432]}}/phenom_test
+        run: mix test.setup
+
+      # Step: Execute the tests.
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.db.ports[5432]}}/phenom_test
+        run: mix test
+
+  check-deploy:
+    name: Check Deployment Target
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      deploy-fly: ${{ steps.check.outputs.deploy-fly }}
+      deploy-vps: ${{ steps.check.outputs.deploy-vps }}
+    steps:
+      - name: Check which deployment to use
+        id: check
+        env:
+          FLY_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -n "$FLY_TOKEN" ]; then
+            echo "deploy-fly=true" >> $GITHUB_OUTPUT
+            echo "deploy-vps=false" >> $GITHUB_OUTPUT
+          else
+            echo "deploy-fly=false" >> $GITHUB_OUTPUT
+            echo "deploy-vps=true" >> $GITHUB_OUTPUT
+          fi
+
+  deploy-fly:
+    # TODO: Not sure if this is needed with fly integration with GitHub
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+    needs: check-deploy
+    if: needs.check-deploy.outputs.deploy-fly == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Get deployment URL
+        id: fly-url
+        run: |
+          APP_NAME=$(grep "app = " fly.toml | cut -d '"' -f 2 || echo "")
+          if [ -n "$APP_NAME" ]; then
+            echo "url=https://${APP_NAME}.fly.dev" >> $GITHUB_OUTPUT
+            echo "✅ Deployed to https://${APP_NAME}.fly.dev" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  deploy-vps:
+    name: Build & Push Docker Image to GHCR
+    runs-on: ubuntu-latest
+    needs: check-deploy
+    if: needs.check-deploy.outputs.deploy-vps == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/phenom:latest
+            ghcr.io/${{ github.repository_owner }}/phenom:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

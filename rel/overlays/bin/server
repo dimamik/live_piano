@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+
+# Migrate the database before starting the server
+./midi_rooms eval MidiRooms.Release.migrate 
+# Start the server
+PHX_SERVER=true exec ./midi_rooms start
