@@ -40,7 +40,7 @@ defmodule LivePianoWeb.RoomLive do
       <!-- Header -->
       <header class="navbar bg-base-100 shadow-sm">
         <div class="flex-1">
-          <a href="/" class="btn btn-ghost text-xl">Piano Live</a>
+          <a href="/" class="btn btn-ghost text-xl">Live Piano</a>
         </div>
         <div class="flex-none gap-2">
           <div class="badge badge-outline gap-1">
@@ -79,7 +79,7 @@ defmodule LivePianoWeb.RoomLive do
           phx-hook="PianoRoom"
           data-slug={@slug}
           data-ice-servers={@ice_servers}
-          class="w-full max-w-4xl"
+          class="w-full"
         >
           <div id="piano-keyboard" class="piano-keyboard"></div>
         </div>

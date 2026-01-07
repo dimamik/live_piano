@@ -1,10 +1,11 @@
 // Web MIDI API wrapper for capturing MIDI keyboard input
 
 export class MidiHandler {
-  constructor(onNoteOn, onNoteOff, onDevicesChanged) {
+  constructor(onNoteOn, onNoteOff, onDevicesChanged, onSustainPedal) {
     this.onNoteOn = onNoteOn;
     this.onNoteOff = onNoteOff;
     this.onDevicesChanged = onDevicesChanged;
+    this.onSustainPedal = onSustainPedal;
     this.midiAccess = null;
     this.activeInputs = new Map();
   }
@@ -69,16 +70,27 @@ export class MidiHandler {
   }
 
   handleMidiMessage(event) {
-    const [status, note, velocity] = event.data;
+    const [status, data1, data2] = event.data;
     const command = status >> 4;
 
     // Note On (command 9) with velocity > 0
-    if (command === 9 && velocity > 0) {
-      this.onNoteOn(note, velocity);
+    if (command === 9 && data2 > 0) {
+      this.onNoteOn(data1, data2);
     }
     // Note Off (command 8) or Note On with velocity 0
-    else if (command === 8 || (command === 9 && velocity === 0)) {
-      this.onNoteOff(note);
+    else if (command === 8 || (command === 9 && data2 === 0)) {
+      this.onNoteOff(data1);
+    }
+    // Control Change (command 11)
+    else if (command === 11) {
+      const controller = data1;
+      const value = data2;
+
+      // Sustain pedal is CC 64
+      if (controller === 64 && this.onSustainPedal) {
+        // Pedal down when value >= 64, up when < 64
+        this.onSustainPedal(value >= 64);
+      }
     }
   }
 

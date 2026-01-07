@@ -25,6 +25,9 @@ const PianoRoom = {
     // Initialize components
     this.piano = new Piano();
 
+    // Start preloading samples immediately (doesn't require user interaction)
+    this.piano.preload();
+
     // Setup keyboard with callbacks - everyone can play
     this.keyboard = new PianoKeyboard(
       document.getElementById("piano-keyboard"),
@@ -40,6 +43,11 @@ const PianoRoom = {
       }
     );
     this.keyboard.render();
+
+    // Scroll to center on middle C (C4) after a short delay
+    setTimeout(() => {
+      this.scrollToMiddleC();
+    }, 100);
 
     this.channel = null;
     this.webrtcManager = null;
@@ -161,6 +169,12 @@ const PianoRoom = {
         console.log("MIDI devices changed:", devices);
         this.updateMidiStatusUI(devices.length > 0);
         this.pushEvent("midi_status", { connected: devices.length > 0 });
+      },
+      // onSustainPedal
+      (isDown) => {
+        console.log("Sustain pedal:", isDown ? "down" : "up");
+        this.sendSustainEvent(isDown);
+        this.piano.setSustainPedal(isDown);
       }
     );
 
@@ -194,13 +208,25 @@ const PianoRoom = {
     }
   },
 
+  sendSustainEvent(isDown) {
+    // Send sustain pedal via WebRTC P2P to all connected peers
+    if (this.webrtcManager) {
+      this.webrtcManager.broadcastMidi("sustain", isDown ? 1 : 0, 0);
+    }
+  },
+
   handleIncomingMidi(payload) {
     const { type, note, velocity } = payload;
 
     if (type === "on") {
       this.playNote(note, velocity);
-    } else {
+      this.keyboard.highlightKey(note);
+    } else if (type === "off") {
       this.stopNote(note);
+      this.keyboard.unhighlightKey(note);
+    } else if (type === "sustain") {
+      // note contains 1 for down, 0 for up
+      this.piano.setSustainPedal(note === 1);
     }
   },
 
@@ -213,18 +239,34 @@ const PianoRoom = {
     }
 
     this.piano.playNote(note, velocity);
-    this.keyboard.highlightKey(note);
   },
 
   stopNote(note) {
     this.piano.stopNote(note);
-    this.keyboard.unhighlightKey(note);
   },
 
   updateListenerCount(count) {
     const el = document.getElementById("listener-count");
     if (el) {
       el.textContent = count;
+    }
+  },
+
+  scrollToMiddleC() {
+    const container = document.querySelector(".piano-container");
+    const middleCKey = document.querySelector('[data-note="60"]'); // C4
+
+    if (container && middleCKey) {
+      const containerRect = container.getBoundingClientRect();
+      const keyRect = middleCKey.getBoundingClientRect();
+
+      // Calculate scroll position to center middle C
+      const scrollLeft = middleCKey.offsetLeft - (containerRect.width / 2) + (keyRect.width / 2);
+
+      container.scrollTo({
+        left: Math.max(0, scrollLeft),
+        behavior: "smooth"
+      });
     }
   },
 

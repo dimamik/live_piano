@@ -6,8 +6,8 @@ export class PianoKeyboard {
     this.onNoteOn = onNoteOn;
     this.onNoteOff = onNoteOff;
     this.keys = new Map(); // noteNumber -> element
-    this.startNote = 48; // C3
-    this.endNote = 84; // C6 (3 octaves)
+    this.startNote = 21; // A0 (lowest note on standard 88-key piano)
+    this.endNote = 108; // C8 (highest note on standard 88-key piano)
     this.pressedKeys = new Set();
     this.mouseDown = false;
 
@@ -47,6 +47,16 @@ export class PianoKeyboard {
     this.container.innerHTML = "";
     this.container.className = "piano-container";
 
+    // Create the main piano frame
+    const pianoFrame = document.createElement("div");
+    pianoFrame.className = "piano-frame";
+
+    // Left end cap
+    const leftEnd = document.createElement("div");
+    leftEnd.className = "piano-end piano-end-left";
+    pianoFrame.appendChild(leftEnd);
+
+    // Keyboard section
     const keyboard = document.createElement("div");
     keyboard.className = "piano-keys";
 
@@ -87,7 +97,14 @@ export class PianoKeyboard {
       this.keys.set(note, key);
     }
 
-    this.container.appendChild(keyboard);
+    pianoFrame.appendChild(keyboard);
+
+    // Right end cap
+    const rightEnd = document.createElement("div");
+    rightEnd.className = "piano-end piano-end-right";
+    pianoFrame.appendChild(rightEnd);
+
+    this.container.appendChild(pianoFrame);
 
     // Global mouse up listener
     document.addEventListener("mouseup", () => {

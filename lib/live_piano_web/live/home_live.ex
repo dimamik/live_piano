@@ -19,7 +19,7 @@ defmodule LivePianoWeb.HomeLive do
     ~H"""
     <div class="min-h-screen flex flex-col items-center justify-center bg-base-200">
       <div class="text-center max-w-2xl px-4">
-        <h1 class="text-5xl font-bold mb-4">Piano Live</h1>
+        <h1 class="text-5xl font-bold mb-4">Live Piano</h1>
         <p class="text-xl text-base-content/70 mb-8">
           Create a room, connect your MIDI keyboard, and let others listen to you play in real-time.
         </p>

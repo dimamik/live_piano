@@ -3,6 +3,6 @@ defmodule LivePianoWeb.PageControllerTest do
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Piano Live"
+    assert html_response(conn, 200) =~ "Live Piano"
   end
 end

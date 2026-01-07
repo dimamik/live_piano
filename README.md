@@ -1,65 +1,115 @@
-<p align="center">
-	<img src="https://raw.githubusercontent.com/dimamik/live_piano/main/img/logo-rich.png" alt="LivePiano logo" width="160" />
-</p>
+# Live Piano
 
-<p align="center">
-	<a href="https://github.com/dimamik/live_piano/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License - MIT" /></a>
-	<a href="https://hex.pm/packages/live_piano"><img src="https://img.shields.io/hexpm/v/live_piano.svg" alt="Hex version" /></a>
-	<a href="https://github.com/dimamik/live_piano/blob/main/deployment/fly/README.md"><img src="https://img.shields.io/badge/Deploy%20to-Fly-blueviolet?logo=fly.io" alt="Deploy to Fly" /></a>
-	<a href="https://github.com/dimamik/live_piano/blob/main/deployment/vps/README.md"><img src="https://img.shields.io/badge/Deploy%20on-VPS-blue?logo=docker" alt="Deploy on VPS" /></a>
-</p>
+Live Piano allows your friends to hear you play the piano in real-time, or even play along with you!
 
-# LivePiano
+## How it works?
 
-An opinionated Phoenix starter designed for speed without sacrificing quality. Spin up a PoC in minutes, then scale it into a production-grade application — the foundation is already there.
+```mermaid
+flowchart TB
+    subgraph BrowserA["Browser A"]
+        InputA["MIDI Keyboard / Keys"]
+        SamplerA["Tone.js Sampler"]
+        InputA --> SamplerA
+    end
 
-Built-in patterns help you (and your AI coding agents) extend the app while following industry best practices, so you write better software from day one.
+    subgraph BrowserB["Browser B"]
+        InputB["MIDI Keyboard / Keys"]
+        SamplerB["Tone.js Sampler"]
+        InputB --> SamplerB
+    end
 
-## Getting started
+    subgraph Server["Phoenix Server"]
+        Channels["Phoenix Channels"]
+    end
 
-```bash
-# 1. Install the generator as a Mix archive (if not already)
-mix archive.install hex live_piano --force
-
-# 2. Generate a new app
-mix live_piano.new my_new_app
-
-# 3. Set it up and run it
-cd my_new_app
-mix setup
-mix phx.server
+    BrowserA <-->|"WebRTC DataChannel\n(MIDI events)"| BrowserB
+    BrowserA <-->|"Signaling"| Channels
+    BrowserB <-->|"Signaling"| Channels
 ```
 
-## What's included
+### Key Components
 
-1. Web - [Phoenix](https://www.phoenixframework.org/) with [LiveView](https://hexdocs.pm/phoenix_live_view/Phoenix.LiveView.html)
-1. Database - [Ecto](https://hexdocs.pm/ecto/Ecto.html) with [Postgres](https://www.postgresql.org/)
-1. Jobs - [Oban](https://hexdocs.pm/oban/Oban.html) and [Oban Web (dashboard)](https://hexdocs.pm/oban_web/installation.html)
-1. HTTP Requests - [Req](https://hexdocs.pm/req/Req.html)
-1. Code Analysis - [Credo](https://hexdocs.pm/credo/overview.html) and [Sobelow](https://hexdocs.pm/sobelow/Sobelow.html)
-1. CI/CD - [GitHub Actions](https://docs.github.com/actions) and [Fly.io](https://fly.io/docs/) or your own VPS (e.g. [Hetzner](https://www.hetzner.com/cloud/)) with [GHCR](https://docs.github.com/packages/working-with-a-github-packages-registry/working-with-the-container-registry) docker images (included)
+**Backend (Elixir/Phoenix)**
 
-## What **will** be included in the future
+- **Phoenix LiveView** - Renders the piano UI and manages room state
+- **Phoenix Channels** - WebSocket-based signaling for WebRTC peer discovery and connection establishment
+- **Phoenix Presence** - Tracks connected users in each room
 
-1. More robust and secure installation. I'd lean towards using hex to version and distribute the source code.
-1. Safer default CSP settings (so we don't need to skip them in Sobelow)
-1. Live Debugger
-1. A way to test Req requests
-1. Observability configuration (ideally - something free or self-hosted)
-1. A way to define new views/components, so LLMs follow established patterns
-1. Authorization (Probably some variation of Phoenix auth). Use password-first approach, since emails are harder to set up
-1. Better LLM instructions and pre-defined tooling
-1. Improved favicons for better branding
-1. And many, many more
+**Frontend (JavaScript)**
 
-## Contributing
+- **Tone.js** - Audio synthesis library using the Salamander Grand Piano samples
+- **Web MIDI API** - Captures input from hardware MIDI keyboards
+- **WebRTC DataChannels** - Peer-to-peer transmission of MIDI events with minimal latency
 
-Feel free to open an issue or submit a pull request if you find bugs or want to contribute improvements!
+### Data Flow
 
-## Learn More
+1. **Input Capture**
 
-- **Phoenix Framework:** https://www.phoenixframework.org/
-- **Phoenix Guides:** https://hexdocs.pm/phoenix/overview.html
-- **Phoenix Docs:** https://hexdocs.pm/phoenix
-- **Elixir Forum:** https://elixirforum.com/c/phoenix-forum
-- **Phoenix Source:** https://github.com/phoenixframework/phoenix
+   - Hardware MIDI keyboard via Web MIDI API (note on/off, velocity, sustain pedal)
+   - On-screen piano keys via mouse/touch events
+   - Computer keyboard mapping (A-L for white keys, W-E-T-Y-U for black keys)
+
+2. **Local Playback**
+
+   - MIDI events trigger Tone.js Sampler immediately for zero-latency local feedback
+   - Samples are preloaded on page load for instant response
+
+3. **P2P Broadcast**
+
+   - MIDI events are serialized as JSON: `{type: "on"|"off"|"sustain", note, velocity}`
+   - Sent via WebRTC DataChannels to all connected peers
+   - DataChannels use `ordered: true, maxRetransmits: 3` for reliable delivery
+
+4. **Remote Playback**
+   - Receiving browsers deserialize MIDI events
+   - Trigger local Tone.js Sampler for audio synthesis
+   - Visual keyboard highlights sync with remote notes
+
+### WebRTC Signaling
+
+The server only handles signaling - no MIDI data flows through it:
+
+1. User A joins room → Phoenix assigns unique peer ID
+2. User B joins room → Server broadcasts `peer_joined` to User A
+3. User A creates RTCPeerConnection and sends `offer` via Channel
+4. Server relays `offer` to User B
+5. User B creates answer and sends via Channel
+6. ICE candidates exchanged until connection established
+7. DataChannel opens → Direct P2P MIDI streaming begins
+
+### Audio Synthesis
+
+- **Sample Library**: Salamander Grand Piano (24 velocity layers, ~25MB)
+- **Sample Format**: MP3, loaded from tonejs.github.io CDN
+- **Preloading**: Samples begin loading on page mount (before user interaction)
+- **AudioContext**: Started on first user interaction (browser requirement)
+- **Sustain Pedal**: Implemented via note tracking - held notes sustain until pedal release
+
+### Full 88-Key Piano
+
+- Note range: A0 (MIDI 21) to C8 (MIDI 108)
+- Horizontally scrollable with auto-center on middle C (C4)
+- Responsive sizing for mobile devices
+
+### Browser Compatibility
+
+- **Chrome/Edge**: Full support including Web MIDI
+- **Firefox**: Works but no Web MIDI API (on-screen/computer keyboard only)
+- **Safari**: Requires TURN servers for WebRTC on mobile networks
+
+## Development
+
+```bash
+# Install dependencies
+mix deps.get
+cd assets && npm install && cd ..
+
+# Start server
+mix phx.server
+
+# Run tests
+mix test
+
+# Run all checks
+mix precommit
+```
