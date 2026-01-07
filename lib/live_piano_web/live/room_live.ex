@@ -68,6 +68,9 @@ defmodule LivePianoWeb.RoomLive do
         <!-- Controls info -->
         <div class="mb-4 text-center text-sm text-base-content/70">
           <p>Click piano keys, use keyboard (A-L for white, W-E-T-Y-U for black), or MIDI</p>
+          <p class="mt-1 text-xs opacity-60 md:hidden">
+            Turn off Silent Mode to hear audio
+          </p>
           <%= if @midi_connected do %>
             <p class="text-success mt-1 font-medium">✓ MIDI keyboard connected</p>
           <% end %>
