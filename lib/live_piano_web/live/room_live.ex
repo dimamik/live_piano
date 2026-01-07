@@ -77,6 +77,7 @@ defmodule LivePianoWeb.RoomLive do
         <div
           id="piano-room"
           phx-hook="PianoRoom"
+          phx-update="ignore"
           data-slug={@slug}
           data-ice-servers={@ice_servers}
           class="w-full"

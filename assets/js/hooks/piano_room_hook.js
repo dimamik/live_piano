@@ -223,14 +223,61 @@ const PianoRoom = {
   },
 
   async playNote(note, velocity) {
-    // Ensure audio is started
+    // Try to start audio if not already started
     if (!this.audioStarted) {
-      await startAudioContext();
-      await this.piano.init();
-      this.audioStarted = true;
+      // Check if audio context is suspended (needs user gesture on mobile)
+      const Tone = await import("tone");
+      if (Tone.getContext().state === "suspended") {
+        this.showAudioEnablePrompt();
+        return;
+      }
+
+      // Try to start audio
+      try {
+        await startAudioContext();
+        await this.piano.init();
+        this.audioStarted = true;
+      } catch (err) {
+        console.warn("Audio init failed:", err);
+        return;
+      }
     }
 
     this.piano.playNote(note, velocity);
+  },
+
+  showAudioEnablePrompt() {
+    // Only show once
+    if (this.audioPromptShown) return;
+    this.audioPromptShown = true;
+
+    // Create overlay prompt
+    const overlay = document.createElement("div");
+    overlay.id = "audio-enable-overlay";
+    overlay.className = "fixed inset-0 bg-black/70 flex items-center justify-center z-50";
+    overlay.innerHTML = `
+      <div class="bg-base-100 rounded-lg p-6 mx-4 text-center max-w-sm shadow-xl">
+        <div class="text-4xl mb-4">🎹</div>
+        <h3 class="text-lg font-semibold mb-2">Enable Audio</h3>
+        <p class="text-base-content/70 mb-4">Tap to hear the music from other players</p>
+        <button id="enable-audio-btn" class="btn btn-primary btn-wide">
+          Enable Audio
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById("enable-audio-btn").addEventListener("click", async () => {
+      try {
+        await startAudioContext();
+        await this.piano.init();
+        this.audioStarted = true;
+        overlay.remove();
+      } catch (err) {
+        console.error("Failed to start audio:", err);
+      }
+    });
   },
 
   stopNote(note) {

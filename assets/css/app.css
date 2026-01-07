@@ -117,6 +117,9 @@
   width: 100%;
   scrollbar-width: thin;
   scrollbar-color: rgba(100, 100, 100, 0.5) transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .piano-container::-webkit-scrollbar {
@@ -130,6 +133,30 @@
 .piano-container::-webkit-scrollbar-thumb {
   background-color: rgba(100, 100, 100, 0.5);
   border-radius: 4px;
+}
+
+/* More visible scrollbar on mobile */
+@media (max-width: 768px) {
+  .piano-container {
+    padding-bottom: 0.5rem;
+    overflow-x: scroll;
+    scrollbar-width: auto;
+    scrollbar-color: rgba(150, 150, 150, 0.8) rgba(50, 50, 50, 0.3);
+  }
+
+  .piano-container::-webkit-scrollbar {
+    height: 12px;
+  }
+
+  .piano-container::-webkit-scrollbar-track {
+    background: rgba(50, 50, 50, 0.3);
+    border-radius: 6px;
+  }
+
+  .piano-container::-webkit-scrollbar-thumb {
+    background-color: rgba(150, 150, 150, 0.8);
+    border-radius: 6px;
+  }
 }
 
 .piano-frame {
