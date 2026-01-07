@@ -2,6 +2,8 @@
 
 Live Piano allows your friends to hear you play the piano in real-time, or even play along with you!
 
+**Try it live:** [piano.dimamik.com](https://piano.dimamik.com)
+
 ## How it works?
 
 ```mermaid

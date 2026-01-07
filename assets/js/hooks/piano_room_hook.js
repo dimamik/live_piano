@@ -1,6 +1,6 @@
 // LiveView hook for the piano room
 
-import { Socket } from "phoenix";
+import { Socket, Presence } from "phoenix";
 import { MidiHandler } from "../midi";
 import { Piano, startAudioContext } from "../piano";
 import { PianoKeyboard } from "../piano_keyboard";
@@ -69,21 +69,13 @@ const PianoRoom = {
 
     this.channel = socket.channel(`room:${this.slug}`, {});
 
-    // Handle presence for peer count only
-    this.channel.on("presence_state", (state) => {
-      const count = Object.keys(state).length;
-      console.log("Presence state - peer count:", count, "peers:", Object.keys(state));
-      this.updateListenerCount(count);
-    });
+    // Handle presence using Phoenix Presence for proper state sync
+    this.presence = new Presence(this.channel);
 
-    this.channel.on("presence_diff", (diff) => {
-      const joins = Object.keys(diff.joins || {}).length;
-      const leaves = Object.keys(diff.leaves || {}).length;
-      const currentEl = document.getElementById("listener-count");
-      if (currentEl) {
-        const current = parseInt(currentEl.textContent) || 1;
-        currentEl.textContent = Math.max(1, current + joins - leaves);
-      }
+    this.presence.onSync(() => {
+      const count = this.presence.list().length;
+      console.log("Presence sync - peer count:", count);
+      this.updateListenerCount(count);
     });
 
     this.channel.join()
@@ -283,6 +275,7 @@ const PianoRoom = {
     if (this.piano) {
       this.piano.destroy();
     }
+    this.presence = null;
     if (this.channel) {
       this.channel.leave();
     }
