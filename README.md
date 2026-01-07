@@ -56,9 +56,10 @@ flowchart TB
 
 3. **P2P Broadcast**
 
-   - MIDI events are serialized as JSON: `{type: "on"|"off"|"sustain", note, velocity}`
+   - MIDI events use compact binary format: `[type, note, velocity]` (3 bytes)
+   - Type byte: `0x00`=off, `0x01`=on, `0x02`=sustain
    - Sent via WebRTC DataChannels to all connected peers
-   - DataChannels use `ordered: true, maxRetransmits: 3` for reliable delivery
+   - DataChannels use `ordered: false, maxRetransmits: 0` for lowest latency
 
 4. **Remote Playback**
    - Receiving browsers deserialize MIDI events

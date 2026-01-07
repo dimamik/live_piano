@@ -81,9 +81,10 @@ export class WebRTCManager {
     this.peers.set(peerId, pc);
 
     // Create data channel for MIDI (only the initiator creates the channel)
+    // Use unordered + unreliable for lowest latency - late notes sound worse than dropped notes
     const dataChannel = pc.createDataChannel("midi", {
-      ordered: true,
-      maxRetransmits: 3
+      ordered: false,
+      maxRetransmits: 0
     });
     this.setupDataChannel(peerId, dataChannel);
 
@@ -143,6 +144,8 @@ export class WebRTCManager {
   setupDataChannel(peerId, channel) {
     console.log(`Setting up data channel for ${peerId}, current state: ${channel.readyState}`);
 
+    channel.binaryType = "arraybuffer";
+
     channel.onopen = () => {
       console.log("Data channel OPEN with:", peerId);
       this.dataChannels.set(peerId, channel);
@@ -158,11 +161,32 @@ export class WebRTCManager {
     };
 
     channel.onmessage = (event) => {
-      console.log("Received MIDI from:", peerId, event.data);
       try {
-        const data = JSON.parse(event.data);
+        // Binary format: [type, note, velocity] - 3 bytes
+        if (!(event.data instanceof ArrayBuffer) || event.data.byteLength !== 3) {
+          console.warn("Invalid MIDI message format:", event.data);
+          return;
+        }
+
+        const data = new Uint8Array(event.data);
+        const type = data[0]; // 0=off, 1=on, 2=sustain
+        const note = data[1];
+        const velocity = data[2];
+
+        let typeStr;
+        if (type === 0) {
+          typeStr = "off";
+        } else if (type === 1) {
+          typeStr = "on";
+        } else if (type === 2) {
+          typeStr = "sustain";
+        } else {
+          console.warn("Unknown MIDI type:", type);
+          return;
+        }
+
         if (this.onMidiReceived) {
-          this.onMidiReceived(data.type, data.note, data.velocity);
+          this.onMidiReceived(typeStr, note, velocity);
         }
       } catch (err) {
         console.error("Error parsing MIDI message:", err);
@@ -292,14 +316,18 @@ export class WebRTCManager {
   }
 
   broadcastMidi(type, note, velocity) {
-    const message = JSON.stringify({ type, note, velocity });
-    console.log(`Broadcasting MIDI to ${this.dataChannels.size} peers:`, message);
+    // Binary format: [type, note, velocity] - 3 bytes
+    // type: 0=off, 1=on, 2=sustain
+    const typeNum = type === "off" ? 0 : type === "on" ? 1 : 2;
+    const buffer = new ArrayBuffer(3);
+    const view = new Uint8Array(buffer);
+    view[0] = typeNum;
+    view[1] = note;
+    view[2] = velocity;
 
     this.dataChannels.forEach((channel, peerId) => {
-      console.log(`  - Peer ${peerId}: channel state = ${channel.readyState}`);
       if (channel.readyState === "open") {
-        channel.send(message);
-        console.log(`    Sent to ${peerId}`);
+        channel.send(buffer);
       }
     });
   }
