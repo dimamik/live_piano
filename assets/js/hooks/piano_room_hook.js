@@ -55,6 +55,16 @@ const PianoRoom = {
     this.audioStarted = false;
     this.localPeerId = null;
     this.pendingPresenceState = null; // Store presence until WebRTC is ready
+    this.currentInstrument = null;
+
+    // Listen for LiveView events
+    this.handleEvent("select_instrument", ({ instrument }) => {
+      console.log("Select instrument event from LiveView:", instrument);
+      // Push to channel to broadcast to all users
+      if (this.channel) {
+        this.channel.push("instrument_change", { instrument });
+      }
+    });
 
     // Connect to channel
     this.connectChannel();
@@ -78,10 +88,21 @@ const PianoRoom = {
       this.updateListenerCount(count);
     });
 
+    // Listen for instrument state broadcasts
+    this.channel.on("instrument_state", (payload) => {
+      console.log("Instrument state received:", payload.instrument);
+      this.handleInstrumentChange(payload.instrument);
+    });
+
     this.channel.join()
       .receive("ok", (resp) => {
         console.log("Joined room successfully", resp);
         this.localPeerId = resp.peer_id;
+
+        // Set initial instrument from server
+        if (resp.instrument) {
+          this.handleInstrumentChange(resp.instrument);
+        }
 
         // Initialize WebRTC manager after we have our peer ID
         this.webrtcManager = new WebRTCManager(
@@ -101,6 +122,17 @@ const PianoRoom = {
       .receive("error", (resp) => {
         console.error("Unable to join room", resp);
       });
+  },
+
+  handleInstrumentChange(instrumentId) {
+    if (instrumentId === this.currentInstrument) return;
+
+    console.log("Changing instrument to:", instrumentId);
+    this.currentInstrument = instrumentId;
+    this.piano.setInstrument(instrumentId);
+
+    // Update LiveView assign for UI sync
+    this.pushEvent("instrument_changed", { instrument: instrumentId });
   },
 
   setupFirstInteraction() {

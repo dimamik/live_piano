@@ -3,10 +3,17 @@ defmodule LivePianoWeb.RoomLive do
 
   alias LivePiano.RoomServer
 
+  @instruments [
+    {"piano", "Piano"},
+    {"electric_piano", "Electric Piano"},
+    {"organ", "Organ"},
+    {"synth_pad", "Synth Pad"}
+  ]
+
   @impl true
   def mount(%{"slug" => slug}, _session, socket) do
     case RoomServer.get_room(slug) do
-      {:ok, _room} ->
+      {:ok, room} ->
         ice_servers = Application.get_env(:live_piano, :ice_servers, [])
 
         socket =
@@ -15,6 +22,8 @@ defmodule LivePianoWeb.RoomLive do
           |> assign(:listener_count, 1)
           |> assign(:midi_connected, false)
           |> assign(:ice_servers, Jason.encode!(ice_servers))
+          |> assign(:instrument, room.instrument)
+          |> assign(:instruments, @instruments)
 
         {:ok, socket}
 
@@ -34,6 +43,16 @@ defmodule LivePianoWeb.RoomLive do
   end
 
   @impl true
+  def handle_event("select_instrument", %{"instrument" => instrument}, socket) do
+    {:noreply, push_event(socket, "select_instrument", %{instrument: instrument})}
+  end
+
+  @impl true
+  def handle_event("instrument_changed", %{"instrument" => instrument}, socket) do
+    {:noreply, assign(socket, :instrument, instrument)}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="min-h-screen bg-base-200 flex flex-col">
@@ -43,7 +62,7 @@ defmodule LivePianoWeb.RoomLive do
           <a href="/" class="btn btn-ghost text-xl">Live Piano</a>
         </div>
         <div class="flex-none gap-2">
-          <div class="badge badge-outline gap-1">
+          <div id="listener-badge" phx-update="ignore" class="badge badge-outline gap-1">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-4 w-4"
@@ -65,7 +84,27 @@ defmodule LivePianoWeb.RoomLive do
       
     <!-- Main content -->
       <main class="flex-1 flex flex-col items-center justify-center p-4">
-        <!-- Controls info -->
+        <!-- Instrument picker -->
+        <div class="mb-6">
+          <div class="flex flex-wrap justify-center gap-2">
+            <button
+              :for={{id, label} <- @instruments}
+              phx-click="select_instrument"
+              phx-value-instrument={id}
+              class={[
+                "btn btn-sm transition-all",
+                if(@instrument == id, do: "btn-primary", else: "btn-ghost btn-outline")
+              ]}
+            >
+              {label}
+            </button>
+          </div>
+          <p class="text-center text-xs text-base-content/50 mt-2">
+            Everyone hears the same instrument
+          </p>
+        </div>
+        
+    <!-- Controls info -->
         <div class="mb-4 text-center text-sm text-base-content/70">
           <p>Click piano keys, use keyboard (A-L for white, W-E-T-Y-U for black), or MIDI</p>
           <p class="mt-1 text-xs opacity-60 md:hidden">

@@ -11,10 +11,10 @@ defmodule LivePianoWeb.RoomChannel do
   @impl true
   def join("room:" <> slug, _params, socket) do
     case RoomServer.get_room(slug) do
-      {:ok, _room} ->
+      {:ok, room} ->
         socket = assign(socket, :slug, slug)
         send(self(), :after_join)
-        {:ok, %{peer_id: socket.id}, socket}
+        {:ok, %{peer_id: socket.id, instrument: room.instrument}, socket}
 
       {:error, :not_found} ->
         {:error, %{reason: "room_not_found"}}
@@ -47,5 +47,18 @@ defmodule LivePianoWeb.RoomChannel do
     })
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_in("instrument_change", %{"instrument" => instrument}, socket) do
+    case RoomServer.set_instrument(socket.assigns.slug, instrument) do
+      {:ok, _room} ->
+        # Broadcast to all users in the room (including sender)
+        broadcast!(socket, "instrument_state", %{instrument: instrument})
+        {:noreply, socket}
+
+      {:error, _reason} ->
+        {:reply, {:error, %{reason: "invalid_instrument"}}, socket}
+    end
   end
 end

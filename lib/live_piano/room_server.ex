@@ -9,7 +9,9 @@ defmodule LivePiano.RoomServer do
   @slug_length 6
   @slug_chars ~c"abcdefghjkmnpqrstuvwxyz23456789"
 
-  defstruct [:slug, :created_at]
+  defstruct [:slug, :created_at, :instrument]
+
+  @valid_instruments ~w(piano electric_piano organ synth_pad)
 
   # Client API
 
@@ -25,7 +27,8 @@ defmodule LivePiano.RoomServer do
 
     room = %__MODULE__{
       slug: slug,
-      created_at: DateTime.utc_now()
+      created_at: DateTime.utc_now(),
+      instrument: "piano"
     }
 
     :ets.insert(@table_name, {slug, room})
@@ -41,6 +44,23 @@ defmodule LivePiano.RoomServer do
       [] -> {:error, :not_found}
     end
   end
+
+  @doc """
+  Sets the instrument for a room
+  """
+  def set_instrument(slug, instrument) when instrument in @valid_instruments do
+    case :ets.lookup(@table_name, slug) do
+      [{^slug, room}] ->
+        updated_room = %{room | instrument: instrument}
+        :ets.insert(@table_name, {slug, updated_room})
+        {:ok, updated_room}
+
+      [] ->
+        {:error, :not_found}
+    end
+  end
+
+  def set_instrument(_slug, _instrument), do: {:error, :invalid_instrument}
 
   @doc """
   Deletes a room
