@@ -46,59 +46,85 @@ export const INSTRUMENTS = {
 
       await Tone.loaded();
       return sampler;
-    }
-  },
-  electric_piano: {
-    name: "Electric Piano",
-    createSynth: () => {
-      return new Tone.PolySynth(Tone.FMSynth, {
-        harmonicity: 3,
-        modulationIndex: 10,
-        oscillator: { type: "sine" },
-        envelope: {
-          attack: 0.01,
-          decay: 0.2,
-          sustain: 0.2,
-          release: 0.8
-        },
-        modulation: { type: "square" },
-        modulationEnvelope: {
-          attack: 0.01,
-          decay: 0.3,
-          sustain: 0.2,
-          release: 0.1
-        }
-      }).toDestination();
-    }
+    },
   },
   organ: {
     name: "Organ",
-    createSynth: () => {
-      return new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: "sine" },
-        envelope: {
-          attack: 0.02,
-          decay: 0.1,
-          sustain: 1,
-          release: 0.3
-        }
+    createSynth: async () => {
+      const sampler = new Tone.Sampler({
+        urls: {
+          C1: "C1.mp3",
+          C2: "C2.mp3",
+          C3: "C3.mp3",
+          C4: "C4.mp3",
+          C5: "C5.mp3",
+          C6: "C6.mp3",
+        },
+        release: 0.5,
+        baseUrl:
+          "https://nbrosowsky.github.io/tonejs-instruments/samples/organ/",
+        onload: () => console.log("Organ samples loaded"),
+        onerror: (err) => console.error("Organ sample error:", err),
       }).toDestination();
-    }
+
+      await Tone.loaded();
+      return sampler;
+    },
   },
-  synth_pad: {
-    name: "Synth Pad",
-    createSynth: () => {
-      return new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: "sawtooth" },
-        envelope: {
-          attack: 0.5,
-          decay: 0.2,
-          sustain: 0.8,
-          release: 1.5
-        }
+  strings: {
+    name: "Strings",
+    createSynth: async () => {
+      const sampler = new Tone.Sampler({
+        urls: {
+          A3: "A3.mp3",
+          A4: "A4.mp3",
+          A5: "A5.mp3",
+          C4: "C4.mp3",
+          C5: "C5.mp3",
+          C6: "C6.mp3",
+          E4: "E4.mp3",
+          E5: "E5.mp3",
+          G4: "G4.mp3",
+          G5: "G5.mp3",
+        },
+        release: 1,
+        baseUrl:
+          "https://nbrosowsky.github.io/tonejs-instruments/samples/violin/",
+        onload: () => console.log("Strings samples loaded"),
+        onerror: (err) => console.error("Strings sample error:", err),
       }).toDestination();
-    }
-  }
+
+      await Tone.loaded();
+      return sampler;
+    },
+  },
+  saxophone: {
+    name: "Saxophone",
+    createSynth: async () => {
+      // Use MIDI.js soundfonts (FluidR3_GM alto sax)
+      const sampler = new Tone.Sampler({
+        urls: {
+          A3: "A3.mp3",
+          A4: "A4.mp3",
+          A5: "A5.mp3",
+          C4: "C4.mp3",
+          C5: "C5.mp3",
+          E4: "E4.mp3",
+          E5: "E5.mp3",
+          G4: "G4.mp3",
+          G5: "G5.mp3",
+        },
+        release: 0.5,
+        baseUrl:
+          "https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/alto_sax-mp3/",
+        onload: () => console.log("Saxophone samples loaded"),
+        onerror: (err) => console.error("Saxophone sample error:", err),
+      }).toDestination();
+
+      await Tone.loaded();
+      return sampler;
+    },
+  },
 };
 
 export class Piano {
@@ -121,7 +147,11 @@ export class Piano {
 
   async setInstrument(instrumentId) {
     // If already this instrument and initialized, do nothing
-    if (instrumentId === this.currentInstrument && this.initialized && !this.loading) {
+    if (
+      instrumentId === this.currentInstrument &&
+      this.initialized &&
+      !this.loading
+    ) {
       return this.loadPromise;
     }
 
@@ -134,25 +164,36 @@ export class Piano {
     // Release all active notes before switching
     this.releaseAllNotes();
 
-    // Dispose old synth
-    if (this.synth) {
-      this.synth.dispose();
-      this.synth = null;
-    }
+    // Store old synth to dispose after new one is ready
+    const oldSynth = this.synth;
+    this.synth = null;
 
     this.currentInstrument = instrumentId;
     this.initialized = false;
     this.loading = true;
 
-    this.loadPromise = this._createSynth(instrument);
+    this.loadPromise = this._createSynth(instrument, oldSynth);
     return this.loadPromise;
   }
 
-  async _createSynth(instrument) {
+  async _createSynth(instrument, oldSynth) {
     try {
-      this.synth = await instrument.createSynth();
+      console.log("Creating synth for:", instrument.name);
+      const newSynth = await instrument.createSynth();
+
+      // Dispose old synth after new one is ready
+      if (oldSynth) {
+        try {
+          oldSynth.dispose();
+        } catch (e) {
+          console.warn("Error disposing old synth:", e);
+        }
+      }
+
+      this.synth = newSynth;
       this.initialized = true;
       this.loading = false;
+      console.log("Synth ready:", instrument.name);
 
       // Play any queued notes that weren't released during loading
       this.pendingNotes.forEach((velocity, noteNumber) => {
@@ -164,6 +205,7 @@ export class Piano {
     } catch (err) {
       console.error("Error creating synth:", err);
       this.loading = false;
+      this.initialized = false;
     }
   }
 

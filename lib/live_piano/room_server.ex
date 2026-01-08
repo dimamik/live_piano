@@ -11,7 +11,7 @@ defmodule LivePiano.RoomServer do
 
   defstruct [:slug, :created_at, :instrument]
 
-  @valid_instruments ~w(piano electric_piano organ synth_pad)
+  @valid_instruments ~w(piano organ strings saxophone)
 
   # Client API
 

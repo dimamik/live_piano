@@ -5,9 +5,9 @@ defmodule LivePianoWeb.RoomLive do
 
   @instruments [
     {"piano", "Piano"},
-    {"electric_piano", "Electric Piano"},
     {"organ", "Organ"},
-    {"synth_pad", "Synth Pad"}
+    {"strings", "Strings"},
+    {"saxophone", "Saxophone"}
   ]
 
   @impl true
